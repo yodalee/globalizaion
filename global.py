@@ -1,24 +1,21 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import sys
-import urllib2
+import urllib.request
 import lxml.html
 import time
 import pickle
 
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
-
-
 TARGET = "http://doc.boyo.org.tw/gp/"
-
+picklefile = "global.pickle"
+outputfile = "global"
 
 def getFun():
-    request = urllib2.Request(TARGET)
-    request.add_header("Pragma", "no-cache")
-    response = urllib2.build_opener().open(request)
+    req = urllib.request.Request(TARGET)
+    req.add_header("Pragma", "no-cache")
+    response = urllib.request.build_opener().open(req)
 
     content = response.read().decode('utf-8')
     root = lxml.html.fromstring(content)
@@ -39,10 +36,8 @@ def getFun():
 
 def openPickle():
     try:
-        return pickle.load(open("global", "rb"))
-    except EOFError:
-        return {}
-    except IOError:
+        return pickle.load(open(picklefile, "rb"))
+    except (EOFError, IOError):
         return {}
 
 
@@ -50,33 +45,36 @@ def main():
     data = openPickle()
     hasNew = True
     count = 0
-    maxCount = 10
+    maxCount = 20
 
     while True:
-        time.sleep(1)
+        time.sleep(0.5)
         hasNew = False
         newq, newa = getFun()
 
+        # store new data
         for q, a in zip(newq, newa):
-            if not data.has_key(q):
+            if not q in data:
                 hasNew = True
                 data[q] = a
                 print("%s %s" % (q, a))
         print("\n")
 
+        # dump to pickle
+        pickle.dump(data, open(picklefile, "wb"))
+
+        # terminate condition
         if hasNew is True:
             count = 0
         else:
             count = count + 1
 
-        pickle.dump(data, open("global", "wb"))
-
         if count == maxCount:
             break
 
-    with open("globalization", "w") as f:
-        for k, v in data.iteritems():
-            f.write("%s\n%s\n" % (k, v))
+    with open(outputfile, "w") as f:
+        for k, v in data.items():
+            f.write("Q: %s\nA: %s\n" % (k, v))
     f.close()
 
 if __name__ == "__main__":
